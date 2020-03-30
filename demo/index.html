@@ -1,0 +1,221 @@
+<html lang="en">
+  <head>
+    <title>SVG flatten.js demo</title>
+    <meta charset="utf-8">
+    <script src="../src/flatten.js"></script>
+    <script src="js/FileSaver.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" 
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  </head>
+  <body>
+  <div class="container-xl" id="main-container">
+    <h1>SVG flatten.js demo</h1>
+    <div class="row">
+        <div class="col-md-5">
+            <form>
+                <div class="btn btn-primary btn-block" style="position: relative">
+                        <label style="padding: 0; margin: 0">Upload SVG</label>
+                        <input type="file" id="loadSVG" name="files[]" accept="image/svg+xml" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; opacity: 0">
+                    </div>
+            </form>
+            
+            
+            <div class="my-3">
+                <textarea class="form-control" id="inputSource" rows="6"></textarea>
+            </div>
+            
+            <div class="my-3">
+                <input type="submit" class="btn btn-primary btn-block" value="Update input image" id="updateInput"  disabled="disabled"/>
+                <div id="errorInput" class="alert alert-danger" style="display: none">An error occured during the SVG reading: the file is not a valid XML.</div>
+            </div>
+                
+            <div class="my-3">
+                <div id="inputImage" class="card"><div class="content-svg" style="height: 10em"></div></div>
+            </div>
+
+        </div>
+        <div class="col-md-2">
+            <input type="submit" class="btn btn-primary btn-block" id="simplify" value="Simplify ►" disabled="disabled" />
+        </div>
+        
+        <div class="col-md-5">
+            <input type="submit" class="btn btn-primary btn-block" id="downloadOutput" value="Download simplified SVG" disabled="disabled" />
+
+            <div class="my-3">
+                <textarea class="form-control" id="outputSource" rows="6" disabled="disabled"></textarea>
+            </div>
+            
+            <div class="my-3">
+                <input type="submit" class="btn btn-primary btn-block" value="Update output image" id="updateOutput" disabled="disabled" />
+                <div id="errorOutput" class="alert alert-danger" style="display: none">An error occured during the SVG reading: the file is not a valid XML.</div>
+            </div>
+
+            <div class="my-3">
+                <div id="outputImage" class="card"><div class="content-svg" style="height: 10em"></div></div>
+            </div>
+            
+        </div>
+    </div>
+    <script>
+    
+    function setOutputImage() {
+        var svgDoc = null;
+        $("#updateOutput").prop('disabled', true);
+        
+        try {
+            svgDoc = $.parseXML($("#outputSource").val());
+        }
+        catch (error) {
+            $("#errorOutput").css("display", "block");
+            $('outputImage .content-svg svg').remove();
+        }
+
+        if (svgDoc != null) {
+            $("#errorOutput").css("display", "none");
+
+            // set on-screen
+            doc = document.importNode(svgDoc.documentElement, true);
+            doc.id = "outputImageSVG";
+            doc.classList.add("content-svg");
+            doc.classList.add("card-img-top");
+
+
+            $('#outputImage .content-svg').replaceWith(doc);
+            $('#outputImage .content-svg').removeAttr("width");
+            $('#outputImage .content-svg').removeAttr("height");
+            
+        }
+    }
+    
+    function setInputImage() {
+        var svgDoc = null;
+        $("#updateInput").prop('disabled', true);
+        
+        try {
+            svgDoc = $.parseXML($("#inputSource").val());
+        }
+        catch (error) {
+            $("#errorInput").css("display", "block");
+            $('#inputImage .content-svg svg').remove();
+            $("#simplify").prop('disabled', true);
+        }
+
+        if (svgDoc != null) {
+            $("#errorInput").css("display", "none");
+
+            // set on-screen
+            doc = document.importNode(svgDoc.documentElement, true);
+            doc.id = "inputImageSVG";
+            doc.classList.add("content-svg");
+            doc.classList.add("card-img-top");
+
+
+            $('#inputImage .content-svg').replaceWith(doc);
+            $('#inputImage .content-svg').removeAttr("width");
+            $('#inputImage .content-svg').removeAttr("height");
+            
+            $("#simplify").prop('disabled', false);
+        }
+    }
+    
+    
+    loadSVG = function(evt) {
+        console.log("loadSVG");
+
+        var file = evt.target.files[0]; // FileList object
+
+
+        // Only process image files.
+        if (file.type != "image/svg+xml") {
+            return;
+        }
+        window.svgName = file.name.replace(/\.[^\.]*$/, "");
+        
+        // To parse the xml within the SVG file, render on-screen
+        // and process it
+        var readerString = new FileReader();
+
+
+
+        // Closure to capture the file information.
+        readerString.onload = (function(uploadedFile) {
+            return function(e) {
+
+            console.log("Parsing SVG paths...");
+            // Get the paths out of the SVG
+            
+            $("#inputSource").val(e.target.result);
+
+            setInputImage();
+            
+        }})(file);
+            
+            
+        console.log("Attempting to read file '"+file.name+"'...");
+
+        // Reads the SVG contents into a string
+        readerString.readAsText(evt.target.files[0]);
+        
+    };
+    
+    changedInputSource = function() {
+        $("#updateInput").prop('disabled', false);
+    }
+    
+    updateInput = function() {
+        setInputImage();
+    }
+    updateOutput = function() {
+        setOutputImage();
+    }
+    
+    
+    simplify = function() {
+        // set output image
+                    
+        $("#outputSource").val(document.getElementById('inputImage').innerHTML);
+        $("#outputSource").prop('disabled', false);
+        
+        setOutputImage();
+        
+        // flatten output image
+        flatten(document.getElementById('outputImageSVG'));
+        
+        // show source from image
+        $("#outputSource").val("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" + 
+                                    document.getElementById('outputImage').innerHTML);
+
+                                    
+        $("#downloadOutput").prop('disabled', false);
+        $("#outputSource").prop('disabled', false);
+        $("#simplify").prop('disabled', true);
+    
+    }
+    changedOutputSource = function() {
+        $("#updateOutput").prop('disabled', false);
+        $("#simplify").prop('disabled', false);
+    }
+    downloadOutput = function() {
+        var blob = new Blob([document.getElementById('outputImage').innerHTML], {type: 'image/svg+xml'});
+        
+        saveAs(blob, window.svgName + '-flatten.svg');
+    }
+    
+    $(document).ready( function () {
+        // loading a svg file will run the rendering process
+        $("#loadSVG").on("change", loadSVG);
+        $("#inputSource").on("change keyup paste", changedInputSource);
+        $("#updateInput").on("click", updateInput);
+        $("#simplify").on("click", simplify);
+        $("#outputSource").on("change keyup paste", changedOutputSource);
+        $("#updateOutput").on("click", updateOutput);
+        $("#downloadOutput").on("click", downloadOutput);
+        });        
+    </script>
+  </body>
+</html>
+    
+    
+    
+
