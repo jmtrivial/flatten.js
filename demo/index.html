@@ -7,8 +7,25 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" 
         integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <style>
+        #dropzone { 
+            z-index: 1000;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #5aaaff;
+            opacity: 0.5;
+            display: none;
+        }
+        #dropzone.visible {
+            display: block;
+        }
+    </style>
   </head>
   <body>
+  <div id="dropzone"></div>
   <div class="container-fluid" id="main-container">
     <div class="row">
         <div class="col-md-5">
@@ -97,6 +114,8 @@
         }
     }
     
+
+    
     function setInputImage() {
         var svgDoc = null;
         $("#updateInput").prop('disabled', true);
@@ -129,10 +148,12 @@
     }
     
     
-    loadSVG = function(evt) {
+    loadSVGButton = function(evt) {
+        loadSVG(evt.target.files[0]);
+    }
+    
+    loadSVG = function(file) {
         console.log("loadSVG");
-
-        var file = evt.target.files[0]; // FileList object
 
 
         // Only process image files.
@@ -164,7 +185,7 @@
         console.log("Attempting to read file '"+file.name+"'...");
 
         // Reads the SVG contents into a string
-        readerString.readAsText(evt.target.files[0]);
+        readerString.readAsText(file);
         
     };
     
@@ -211,15 +232,44 @@
         saveAs(blob, window.svgName + '-flatten.svg');
     }
     
+    dragOverHTML = function(e) {
+        $("#dropzone").addClass("visible");
+    }
+    
+    dragOver = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.originalEvent.dataTransfer.dropEffect = 'copy';
+    }
+    
+    dragLeave = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $("#dropzone").removeClass("visible");
+    }
+    changeUploadFile = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        loadSVG(e.originalEvent.dataTransfer.files[0]);
+        
+        $("#dropzone").removeClass("visible");
+    }
+    
     $(document).ready( function () {
         // loading a svg file will run the rendering process
-        $("#loadSVG").on("change", loadSVG);
+        $("#loadSVG").on("change", loadSVGButton);
         $("#inputSource").on("change keyup paste", changedInputSource);
         $("#updateInput").on("click", updateInput);
         $("#simplify").on("click", simplify);
         $("#outputSource").on("change keyup paste", changedOutputSource);
         $("#updateOutput").on("click", updateOutput);
         $("#downloadOutput").on("click", downloadOutput);
+        
+        $('body').on('dragover', dragOverHTML);
+        $('#dropzone').on('dragover', dragOver);
+        $('#dropzone').on('dragleave', dragLeave);
+        $('#dropzone').on('drop', changeUploadFile);
+        
         });        
     </script>
   </body>
