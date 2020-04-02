@@ -9,10 +9,21 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
   </head>
   <body>
-  <div class="container-xl" id="main-container">
-    <h1>SVG flatten.js demo</h1>
+  <div class="container-fluid" id="main-container">
     <div class="row">
         <div class="col-md-5">
+            <h1>SVG flatten.js demo</h1>
+        </div>
+        <div class="col-md-2">
+            <input type="submit" class="btn btn-primary btn-block my-3" id="simplify" value="Simplify ►" disabled="disabled" />
+        </div>
+        <div class="col-md-5 text-right">
+            <a href="https://github.com/jmtrivial/flatten.js">about</a>
+        </div>
+    </div>
+        
+    <div class="row">
+        <div class="col-md-6">
             <form>
                 <div class="btn btn-primary btn-block" style="position: relative">
                         <label style="padding: 0; margin: 0">Upload SVG</label>
@@ -22,10 +33,10 @@
             
             
             <div class="my-3">
-                <textarea class="form-control" id="inputSource" rows="6"></textarea>
+                <textarea class="form-control text-monospace" style="font-size: 90%" id="inputSource" rows="12"></textarea>
             </div>
             
-            <div class="my-3">
+            <div class="my-6">
                 <input type="submit" class="btn btn-primary btn-block" value="Update input image" id="updateInput"  disabled="disabled"/>
                 <div id="errorInput" class="alert alert-danger" style="display: none">An error occured during the SVG reading: the file is not a valid XML.</div>
             </div>
@@ -35,15 +46,13 @@
             </div>
 
         </div>
-        <div class="col-md-2">
-            <input type="submit" class="btn btn-primary btn-block" id="simplify" value="Simplify ►" disabled="disabled" />
-        </div>
+
         
-        <div class="col-md-5">
+        <div class="col-md-6">
             <input type="submit" class="btn btn-primary btn-block" id="downloadOutput" value="Download simplified SVG" disabled="disabled" />
 
             <div class="my-3">
-                <textarea class="form-control" id="outputSource" rows="6" disabled="disabled"></textarea>
+                <textarea class="form-control text-monospace" style="font-size: 90%" id="outputSource" rows="12" disabled="disabled"></textarea>
             </div>
             
             <div class="my-3">
