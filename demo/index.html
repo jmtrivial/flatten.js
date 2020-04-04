@@ -125,7 +125,8 @@
         }
         catch (error) {
             $("#errorOutput").css("display", "block");
-            $('outputImage .content-svg svg').remove();
+            $('#outputImage .content-svg').remove();
+            $("#outputImage").html("<div class=\"content-svg\" style=\"height: 10em\"></div>");
         }
 
         if (svgDoc != null) {
@@ -176,7 +177,9 @@
         catch (error) {
             $("#simplify").prop('disabled', true);
             $("#errorInput").css("display", "block");
-            $('#inputImage .content-svg svg').remove();
+            $('#inputImage svg').remove();
+            $("#inputImage").html("<div class=\"content-svg\" style=\"height: 10em\"></div>");
+
         }
 
         if (svgDoc != null) {
@@ -229,6 +232,14 @@
             if (propagate) {
                 if (!$("#simplify").prop('disabled')) {
                     simplify();
+                }
+                else {
+                    $('#outputImage .content-svg').remove();
+                    $("#outputImage").html("<div class=\"content-svg\" style=\"height: 10em\"></div>");
+                    $("#updateOutput").prop('disabled', true);
+                    $("#outputSource").val("");
+                    $("#outputSource").prop('disabled', true);
+                    $("#downloadOutput").prop('disabled', true);
                 }
             }
             
