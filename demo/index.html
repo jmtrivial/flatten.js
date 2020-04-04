@@ -1,7 +1,8 @@
 <html lang="en">
   <head>
-    <title>SVG flatten.js demo</title>
     <meta charset="utf-8">
+    <title>SVG flatten.js demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="../src/flatten.js"></script>
     <script src="js/FileSaver.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" 
@@ -32,9 +33,21 @@
             <h1>SVG flatten.js demo</h1>
         </div>
         <div class="col-md-2">
-            <input type="submit" class="btn btn-primary btn-block my-3" id="simplify" value="Simplify ►" disabled="disabled" />
+            <form class="my-3">
+                <input type="submit" class="btn btn-primary btn-block" id="simplify" value="Simplify ►" disabled="disabled" />
+            </form>
         </div>
-        <div class="col-md-5 text-right">
+        <div class="col-md-4">
+            <form class="my-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="Clean SVG" id="cleanSVG" checked="checked">
+                    <label class="form-check-label" for="cleanSVG">
+                        Clean SVG
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-1 text-right">
             <a href="https://github.com/jmtrivial/flatten.js">about</a>
         </div>
     </div>
@@ -48,7 +61,7 @@
                     </div>
             </form>
             
-            
+            <h2>Original image</h2>
             <div class="my-3">
                 <textarea class="form-control text-monospace" style="font-size: 90%" id="inputSource" rows="12"></textarea>
             </div>
@@ -66,8 +79,11 @@
 
         
         <div class="col-md-6">
-            <input type="submit" class="btn btn-primary btn-block" id="downloadOutput" value="Download simplified SVG" disabled="disabled" />
+            <form>
+                <input type="submit" class="btn btn-primary btn-block" id="downloadOutput" value="Download simplified SVG" disabled="disabled" />
+            </form>
 
+            <h2>Flatten image</h2>
             <div class="my-3">
                 <textarea class="form-control text-monospace" style="font-size: 90%" id="outputSource" rows="12" disabled="disabled"></textarea>
             </div>
@@ -85,6 +101,21 @@
     </div>
     <script>
     
+    function addIDInAttr(attrVal, suffix) {
+        var sharp = attrVal.indexOf("#");
+        const start = attrVal.substring(0, sharp);
+        var end = attrVal.substring(sharp);
+        var endPos = end.search("[\"\'\)]");
+        if (endPos > 0) {
+            const tag = end.substring(0, endPos);
+            const final = end.substring(endPos);
+            return start + tag + suffix + final;
+        }
+        else {
+            return attrVal;
+            }
+    }
+    
     function setOutputImage() {
         var svgDoc = null;
         $("#updateOutput").prop('disabled', true);
@@ -99,13 +130,32 @@
 
         if (svgDoc != null) {
             $("#errorOutput").css("display", "none");
-
+                    
+            
+        
             // set on-screen
             doc = document.importNode(svgDoc.documentElement, true);
-            doc.id = "outputImageSVG";
             doc.classList.add("content-svg");
             doc.classList.add("card-img-top");
 
+            var all = doc.getElementsByTagName('*');
+            for (var i = 0; i != all.length; ++i) {
+                const suffix = "-flatten";
+                var element = all[i];
+                // change id of the nodes to deals with possible collisions
+                // between the two images (input and output)
+                if (element.id) {
+                    element.id = element.id + suffix;
+                }
+                // update the "url()" parameters referring to the updated IDs
+                for(var attr of ["mask", "clip-path"]) {
+                    var attrVal = element.getAttribute(attr);
+                    if (attrVal != null) {
+                        element.setAttribute(attr, addIDInAttr(attrVal, suffix));
+                    }
+                }
+            }            
+            
 
             $('#outputImage .content-svg').replaceWith(doc);
             $('#outputImage .content-svg').removeAttr("width");
@@ -124,17 +174,17 @@
             svgDoc = $.parseXML($("#inputSource").val());
         }
         catch (error) {
+            $("#simplify").prop('disabled', true);
             $("#errorInput").css("display", "block");
             $('#inputImage .content-svg svg').remove();
-            $("#simplify").prop('disabled', true);
         }
 
         if (svgDoc != null) {
             $("#errorInput").css("display", "none");
+            $("#simplify").prop('disabled', false);
 
             // set on-screen
             doc = document.importNode(svgDoc.documentElement, true);
-            doc.id = "inputImageSVG";
             doc.classList.add("content-svg");
             doc.classList.add("card-img-top");
 
@@ -143,7 +193,6 @@
             $('#inputImage .content-svg').removeAttr("width");
             $('#inputImage .content-svg').removeAttr("height");
             
-            $("#simplify").prop('disabled', false);
         }
     }
     
@@ -152,9 +201,7 @@
         loadSVG(evt.target.files[0]);
     }
     
-    loadSVG = function(file) {
-        console.log("loadSVG");
-
+    loadSVG = function(file, propagate = false) {
 
         // Only process image files.
         if (file.type != "image/svg+xml") {
@@ -179,6 +226,12 @@
 
             setInputImage();
             
+            if (propagate) {
+                if (!$("#simplify").prop('disabled')) {
+                    simplify();
+                }
+            }
+            
         }})(file);
             
             
@@ -200,6 +253,51 @@
         setOutputImage();
     }
     
+    getMissingLines = function() {
+        var txt = $("#inputSource").val();
+        var loc = txt.indexOf("<svg");
+        if (loc < 0)
+            return "";
+        else
+            return txt.substring(0, loc);
+    }
+    
+    simplifyOutputImage = function() {
+        const sodipodi = "http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd";
+        const inkscape = "http://www.inkscape.org/namespaces/inkscape";
+        const xmlns = "http://www.w3.org/2000/svg";
+        
+        
+        // remove all sodipodi references
+        for(var e of $('#outputImage .content-svg')) {
+            e.removeAttributeNS(xmlns, "sodipodi");
+        }
+        $('#outputImage .content-svg').nodeFilter('sodipodi:namedview').remove();
+        
+        for(var v of ["docname"]) {
+            
+            for(var e of $('#outputImage .content-svg')) {
+                e.removeAttributeNS(sodipodi, v);
+            }
+            for(var e of $('#outputImage .content-svg').find("*")) {
+                e.removeAttributeNS(sodipodi, v);
+            }
+        }
+        
+        // remove all inkscape references
+        for(var e of $('#outputImage .content-svg')) {
+            e.removeAttributeNS(xmlns, "inkscape");
+        }
+        for(var v of ["version", "docname", "label", "groupmode"]) {
+            for(var e of $('#outputImage .content-svg')) {
+                e.removeAttributeNS(inkscape, v);
+            }
+            for(var e of $('#outputImage .content-svg').find("*")) {
+                e.removeAttributeNS(inkscape, v);
+            }
+        }
+        
+    }
     
     simplify = function() {
         // set output image
@@ -209,11 +307,16 @@
         
         setOutputImage();
         
-        // flatten output image
-        flatten(document.getElementById('outputImageSVG'));
         
+        if ($("#cleanSVG").prop("checked")) {
+            simplifyOutputImage();
+        }
+        
+        // flatten output image
+        flatten(document.getElementById('outputImage').children[0]);
+
         // show source from image
-        $("#outputSource").val("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n" + 
+        $("#outputSource").val(getMissingLines() + 
                                     document.getElementById('outputImage').innerHTML);
 
                                     
@@ -250,9 +353,9 @@
     changeUploadFile = function(e) {
         e.stopPropagation();
         e.preventDefault();
-        loadSVG(e.originalEvent.dataTransfer.files[0]);
-        
+        loadSVG(e.originalEvent.dataTransfer.files[0], true);
         $("#dropzone").removeClass("visible");
+
     }
     
     $(document).ready( function () {
@@ -272,6 +375,7 @@
         
         });        
     </script>
+    <script src="js/jquery.nodeFilter.js"></script>
   </body>
 </html>
     
